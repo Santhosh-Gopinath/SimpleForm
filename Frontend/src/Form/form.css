@@ -6,6 +6,7 @@ form {
   width: 350px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 form h1 {
@@ -63,4 +64,5 @@ form textarea:focus {
 form textarea {
   resize: vertical;
   min-height: 60px;
+  flex: 1;
 }

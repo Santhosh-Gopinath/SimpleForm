@@ -13,6 +13,23 @@ const createForm = async (req, res) => {
   }
 }
 
+// POST /api/forms/bulk   (body: an array of form objects)
+const bulkCreateForms = async (req, res) => {
+  try {
+    const records = req.body
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ success: false, message: 'Request body must be a non-empty array' })
+    }
+
+    const inserted = await Form.insertMany(records, { ordered: true })
+
+    res.status(201).json({ success: true, count: inserted.length, data: inserted })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
 // GET /api/forms
 const getForms = async (req, res) => {
   try {
@@ -23,4 +40,4 @@ const getForms = async (req, res) => {
   }
 }
 
-module.exports = { createForm, getForms }
+module.exports = { createForm, bulkCreateForms, getForms }

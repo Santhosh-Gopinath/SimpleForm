@@ -1,25 +1,32 @@
+html, body, #root {
+  height: 100%;
+}
+
 #split {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   align-items: stretch;
   justify-content: center;
   padding: 40px 20px;
-  gap: 30px;
+  gap: 50px;
+  box-sizing: border-box;
 }
 
 .left-panel {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   flex: 0 0 350px;
 }
 
 .right-panel {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-start;
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 /* ---- divider: two bold vertical lines ---- */

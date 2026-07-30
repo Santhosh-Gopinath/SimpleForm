@@ -4,19 +4,54 @@
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 720px;
+  min-width: 0;
+  max-width: 1000px;
+  max-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .table-card h1 {
   text-align: center;
-  margin-bottom: 20px;
   font-size: 1.5rem;
   color: #2f4f2f;
+  margin: 0;
+}
+
+.bulk-delete-btn {
+  position: absolute;
+  right: 0;
+  padding: 8px 16px;
+  background: #e53935;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.bulk-delete-btn:hover {
+  background: #c62828;
 }
 
 .table-wrapper {
   overflow-x: auto;
-  border: 1px solid #cfd8cf;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #e2e8e2;
   border-radius: 8px;
 }
 
@@ -31,28 +66,323 @@ thead {
 }
 
 th {
-  padding: 10px 12px;
+  padding: 12px;
   text-align: left;
   color: #ffffff;
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.5px;
   white-space: nowrap;
+  border-bottom: 1px solid #e2e8e2;
 }
 
 td {
-  padding: 10px 12px;
-  border-top: 1px solid #e2e8e2;
+  padding: 12px;
+  border-bottom: 1px solid #eef1ee;
   color: #333;
+  vertical-align: middle;
 }
 
-tbody tr:nth-child(even) {
+/* S.No column color */
+td:nth-child(2) {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.checkbox-col {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4caf50;
+}
+
+.actions-col {
+  white-space: nowrap;
+  text-align: center;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
   background: #f7f9f7;
 }
 
+tbody tr.row-selected {
+  background: #eaf6ea;
+}
+
+/* ---- gender badge ---- */
+.gender-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gender-male {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.gender-female {
+  background: #fce4ec;
+  color: #ad1457;
+}
+
+.gender-other {
+  background: #ede7f6;
+  color: #5e35b1;
+}
+
+/* ---- action icons ---- */
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.icon-btn:hover {
+  background: #eef1ee;
+  transform: scale(1.1);
+}
+
+.empty-row {
+  text-align: center;
+  padding: 24px;
+  color: #888;
+}
+
+/* ---- footer: total count + pagination + per page ---- */
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  flex-shrink: 0;
+}
+
 .total-count {
-  margin-top: 16px;
   font-weight: 600;
   color: #2f4f2f;
-  text-align: right;
+  white-space: nowrap;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-arrow,
+.page-number {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid #cfd8cf;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #333;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.page-arrow:hover:not(:disabled),
+.page-number:hover {
+  background: #f0f5ef;
+}
+
+.page-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-number.active {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: #ffffff;
+}
+
+.per-page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #4a4a4a;
+}
+
+.per-page select {
+  padding: 4px 8px;
+  border: 1px solid #cfd8cf;
+  border-radius: 5px;
+  background: #f7f9f7;
+  color: #222;
+  font-size: 13px;
+}
+
+/* ---- modal overlay (shared by edit + confirm) ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* ---- edit modal box ---- */
+.modal-box {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-box h2 {
+  text-align: center;
+  color: #2f4f2f;
+  margin: 0 0 24px;
+  font-size: 1.4rem;
+}
+
+.modal-box form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-box label {
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: #4a4a4a;
+}
+
+.modal-box label:first-of-type{
+  margin-top: 0;
+}
+
+.modal-box input,
+.modal-box select,
+.modal-box textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cfd8cf;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #f7f9f7;
+  color: #222;
+  box-sizing:border-box;
+}
+
+.modal-box input:focus,
+.modal-box select:focus,
+.modal-box textarea:focus {
+  outline: none;
+  border-color: #4caf50;
+  background-color: #ffffff;
+}
+
+.modal-box textarea {
+  resize: vertical;
+  min-height: 50px;
+  line-height: 1.4;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  padding: 9px 18px;
+  background: #f0f0f0;
+  color: #444;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.save-btn {
+  padding: 9px 22px;
+  background: #4caf50;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.save-btn:hover {
+  background: #3e8e41;
+}
+
+/* ---- confirm modal box ---- */
+.confirm-box {
+  background: #ffffff;
+  padding: 28px 32px;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 380px;
+  box-sizing: border-box;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.confirm-box p {
+  color: #333;
+  font-size: 15px;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.confirm-btn {
+  padding: 9px 22px;
+  background: #e53935;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.confirm-btn:hover {
+  background: #c62828;
 }
