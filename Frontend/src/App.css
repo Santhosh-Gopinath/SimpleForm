@@ -1,0 +1,70 @@
+#center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+form {
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  color: #2f4f2f;
+}
+
+label {
+  margin-top: 12px;
+  margin-bottom: 5px;
+  font-weight: 500;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: #4a4a4a;
+}
+
+button {
+  margin-top: 24px;
+  padding: 10px;
+  background: #4caf50;
+  color: #ffffff;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background: #3e8e41;
+}
+
+input, select, textarea {
+  padding: 8px 10px;
+  border: 1px solid #cfd8cf;
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: #f7f9f7;
+  color: #222;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 60px;
+}
