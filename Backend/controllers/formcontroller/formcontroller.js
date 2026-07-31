@@ -5,7 +5,7 @@ const createForm = async (req, res) => {
   try {
     const { name, email, phone, dob, gender, address } = req.body
 
-    const newForm = await Form.create({ name, email, phone, dob, gender, address })
+    const newForm = await Form.create(req.body)
 
     res.status(201).json({ success: true, data: newForm })
   } catch (err) {

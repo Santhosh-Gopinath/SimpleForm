@@ -9,3 +9,57 @@ body {
   background: #eef3ec;
   min-height: 100vh;
 }
+
+/* ---- neat, professional date-of-birth picker ---- */
+.date-input-wrapper {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #cfd8cf;
+  border-radius: 5px;
+  background-color: #f7f9f7;
+  overflow: hidden;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.date-input-wrapper:focus-within {
+  border-color: #4caf50;
+  background-color: #ffffff;
+}
+
+.date-input-wrapper input[type='date'] {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color-scheme: light;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+}
+
+/* fully hide the native calendar icon; our own button replaces it */
+.date-input-wrapper input[type='date']::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.date-icon-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  border: none;
+  border-left: 1px solid #dfe6df;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: background 0.2s ease;
+}
+
+.date-icon-btn:hover {
+  background: #e6efe6;
+}

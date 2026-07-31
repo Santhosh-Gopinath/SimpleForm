@@ -9,6 +9,14 @@ form {
   justify-content: space-between;
 }
 
+.section-divider { 
+  margin-top: 20px; 
+  padding-top: 16px; 
+  border-top: 1px solid #e2e8e2; 
+  font-size: 0.95rem; 
+  color: #2f4f2f; 
+}
+
 form h1 {
   text-align: center;
   margin-bottom: 20px;
