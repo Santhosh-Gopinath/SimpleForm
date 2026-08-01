@@ -1,6 +1,16 @@
 const Table = require('../../model/tablemodel/tablemodel')
 const DeleteLog = require('../../model/deletelogmodel/deletelogmodel')
 const PDFDocument = require('pdfkit')
+const { Document, Packer, Paragraph, PageBreak } = require('docx')
+
+const { MARGIN, drawWatermark, drawSlimHeader, drawFooter } = require('./pdfDesign')
+const { drawCoverPage, drawCard, cardHeight } = require('./pdfSections')
+const { buildCoverPage, buildEmployeeCard } = require('./wordSections')
+
+// A4 in DXA (twips): 1 inch = 1440 DXA. Margin kept at 0.5in so the content
+// width closely matches the PDF's usable width (A4 width - 2*40pt margin).
+const WORD_PAGE = { width: 11906, height: 16838 }
+const WORD_MARGIN = 720
 
 // GET /api/table?page=1&limit=5&search=text
 const getTableData = async (req, res) => {
@@ -122,139 +132,72 @@ const bulkDeleteRecords = async (req, res) => {
 }
 
 // GET /api/table/export-pdf
-// Renders each employee as a Bio-Data + Employee detail card (black & white,
-// Times New Roman), two cards per page, matching the Hurryep bio-data form.
+// Cover page (brand + headcount stats + department breakdown) followed by
+// two employee bio-data cards per page. See pdfDesign.js / pdfSections.js
+// for the drawing helpers.
+// Shared by both the PDF and Word exports: headcount + department tally for
+// the cover page. Free-text department values are trimmed as typed; blank
+// values are grouped under "Unspecified". If there are many distinct
+// departments, keep the top 8 and roll the rest into "Other" so the
+// breakdown panel never overflows.
+function summarizeRecords(records) {
+  const totalCount = records.length
+  const maleCount = records.filter((r) => r.gender === 'male').length
+  const femaleCount = records.filter((r) => r.gender === 'female').length
+
+  const tally = {}
+  records.forEach((r) => {
+    const dept = (r.department || '').trim() || 'Unspecified'
+    tally[dept] = (tally[dept] || 0) + 1
+  })
+  let deptCounts = Object.entries(tally).sort((a, b) => b[1] - a[1])
+  if (deptCounts.length > 8) {
+    const top = deptCounts.slice(0, 7)
+    const otherTotal = deptCounts.slice(7).reduce((sum, [, c]) => sum + c, 0)
+    deptCounts = [...top, ['Other', otherTotal]]
+  }
+  if (deptCounts.length === 0) deptCounts = [['No records yet', 0]]
+
+  return { totalCount, maleCount, femaleCount, deptCounts }
+}
+
 const exportTablePdf = async (req, res) => {
   try {
     const records = await Table.find().sort({ createdAt: 1 })
+    const { totalCount, maleCount, femaleCount, deptCounts } = summarizeRecords(records)
 
-    const genderLabel = (value) => {
-      if (value === 'male') return 'Male'
-      if (value === 'female') return 'Female'
-      if (value === 'other') return 'Other'
-      return value || ''
-    }
-
-    const BLACK = '#000000'
-    const GRAY = '#D9D9D9'
-    const ROW_H = 22
-    const SPACER_H = 10
-    const CARD_GAP = 20
-    const PER_PAGE = 2
-
-    const doc = new PDFDocument({ size: 'A4', margin: 40 })
+    const doc = new PDFDocument({ size: 'A4', margin: MARGIN })
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename=Employee-Bio-Data.pdf')
     doc.pipe(res)
 
-    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right
-    const left = doc.page.margins.left
+    const pageWidth = doc.page.width - 2 * MARGIN
+    const PER_PAGE = 2
+    const totalPages = 1 + Math.ceil(totalCount / PER_PAGE)
 
-    const drawRow = (y, cols, opts = {}) => {
-      const h = opts.height || ROW_H
-      let x = left
-      if (opts.shaded) {
-        doc.rect(left, y, pageWidth, h).fillColor(GRAY).fill()
-      }
-      doc.strokeColor(BLACK).lineWidth(1)
-      doc.rect(left, y, pageWidth, h).stroke()
-      doc.fillColor(BLACK)
-      doc.font(opts.bold ? 'Times-Bold' : 'Times-Roman').fontSize(10)
-      cols.forEach((col) => {
-        if (opts.centered) {
-          doc.text(col.text, x, y + h / 2 - 5, { width: col.width, align: 'center' })
-        } else {
-          doc.text(col.text, x + 5, y + h / 2 - 5, { width: col.width - 10, align: 'left' })
-        }
-        x += col.width
+    drawCoverPage(doc, { totalCount, maleCount, femaleCount, deptCounts })
+
+    for (let i = 0; i < records.length; i += PER_PAGE) {
+      doc.addPage()
+      drawWatermark(doc)
+      drawSlimHeader(doc, pageWidth)
+
+      const chunk = records.slice(i, i + PER_PAGE)
+      const ch = cardHeight()
+      const usableTop = MARGIN + 30
+      const usableBottom = doc.page.height - MARGIN - 40
+      const usableH = usableBottom - usableTop
+      const gap = (usableH - chunk.length * ch) / (chunk.length + 1)
+
+      let y = usableTop + gap
+      chunk.forEach((record, j) => {
+        drawCard(doc, MARGIN, y, record, i + j + 1, totalCount, pageWidth)
+        y += ch + gap
       })
-      if (cols.length > 1) {
-        let vx = left
-        for (let i = 0; i < cols.length - 1; i++) {
-          vx += cols[i].width
-          doc.moveTo(vx, y).lineTo(vx, y + h).stroke()
-        }
-      }
-      return y + h
+
+      drawFooter(doc, pageWidth, i / PER_PAGE + 2, totalPages)
     }
-
-    const drawBlankRow = (y) => {
-      doc.strokeColor(BLACK).lineWidth(1)
-      doc.rect(left, y, pageWidth, SPACER_H).stroke()
-      return y + SPACER_H
-    }
-
-    const cardHeight = () => ROW_H * 8 + SPACER_H
-
-    const drawCard = (startY, r) => {
-      const w3 = pageWidth / 3
-      let y = startY
-
-      y = drawRow(y, [{ text: `Bio-Data: ${r.name || ''}`, width: pageWidth }], { shaded: true, bold: true, centered: true })
-      y = drawRow(y, [
-        { text: `Full name: ${r.name || ''}`, width: w3 },
-        { text: `Email: ${r.email || ''}`, width: w3 },
-        { text: `Blood Group: ${r.bloodGroup || ''}`, width: w3 },
-      ])
-      y = drawRow(y, [
-        { text: `Gender: ${genderLabel(r.gender)}`, width: w3 },
-        { text: `Phone Number: ${r.phone || ''}`, width: w3 },
-        { text: `Highest Qualification: ${r.qualification || ''}`, width: w3 },
-      ])
-      y = drawRow(y, [
-        { text: `Emergency contact: ${r.emergencyContact || ''}`, width: w3 },
-        { text: `Address: ${r.address || ''}`, width: w3 * 2 },
-      ])
-      y = drawBlankRow(y)
-      y = drawRow(y, [{ text: 'Employee detail', width: pageWidth }], { shaded: true, bold: true, centered: true })
-      y = drawRow(y, [
-        { text: `Employee ID: ${r.employeeId || ''}`, width: w3 },
-        { text: `Designation: ${r.designation || ''}`, width: w3 },
-        { text: `Department: ${r.department || ''}`, width: w3 },
-      ])
-      y = drawRow(y, [
-        { text: `Date of Joining: ${r.dateOfJoining || ''}`, width: w3 },
-        { text: `Employment Type: ${r.employmentType || ''}`, width: w3 * 2 },
-      ])
-      y = drawRow(y, [{ text: `Reporting Manager: ${r.reportingManager || ''}`, width: pageWidth }])
-
-      return y
-    }
-
-    // ---- title + totals ----
-    doc.font('Times-Bold').fontSize(18).fillColor(BLACK)
-    doc.text('HURRYEP TECHNOLOGY', left, doc.y, { width: pageWidth, align: 'center' })
-    doc.font('Times-Bold').fontSize(14)
-    doc.text('EMPLOYEE RECORDS', { width: pageWidth, align: 'center' })
-    doc.moveDown(1)
-
-    const totalCount = records.length
-    const maleCount = records.filter((r) => r.gender === 'male').length
-    const femaleCount = records.filter((r) => r.gender === 'female').length
-
-    doc.font('Times-Bold').fontSize(12)
-    doc.text(`TOTAL COUNTS: ${totalCount}`, left, doc.y, { width: pageWidth })
-    doc.text(`TOTAL MALE: ${maleCount}`, left, doc.y, { width: pageWidth })
-    doc.text(`TOTAL FEMALE: ${femaleCount}`, left, doc.y, { width: pageWidth })
-    doc.moveDown(1)
-
-    let y = doc.y
-    records.forEach((record, index) => {
-      const h = cardHeight()
-      if (y + h > doc.page.height - doc.page.margins.bottom) {
-        doc.addPage()
-        y = doc.page.margins.top
-      }
-      y = drawCard(y, record)
-      y += CARD_GAP
-
-      const posOnPage = (index + 1) % PER_PAGE
-      if (posOnPage === 0 && index + 1 < records.length) {
-        doc.addPage()
-        y = doc.page.margins.top
-      }
-    })
 
     doc.end()
   } catch (err) {
@@ -262,4 +205,53 @@ const exportTablePdf = async (req, res) => {
   }
 }
 
-module.exports = { getTableData, updateRecord, deleteRecord, bulkDeleteRecords, exportTablePdf }
+// GET /api/table/export-word
+// Same content and layout intent as exportTablePdf (cover page + department
+// breakdown + one bordered "card" per employee), rebuilt with the `docx`
+// library so the download is a real .docx instead of a PDF. Word has no
+// free-form vector drawing, so a few PDF-only touches (true circular
+// avatars, the rotated diagonal watermark, fully-rounded pills) are
+// approximated with shaded table cells/text instead — see wordDesign.js.
+const exportTableWord = async (req, res) => {
+  try {
+    const records = await Table.find().sort({ createdAt: 1 })
+    const { totalCount, maleCount, femaleCount, deptCounts } = summarizeRecords(records)
+
+    const contentWidth = WORD_PAGE.width - 2 * WORD_MARGIN
+
+    const coverBlocks = buildCoverPage({ totalCount, maleCount, femaleCount, deptCounts, contentWidth })
+
+    const cardBlocks = []
+    records.forEach((record, i) => {
+      cardBlocks.push(buildEmployeeCard(record, i + 1, totalCount, contentWidth))
+      cardBlocks.push(new Paragraph({ spacing: { after: 200 }, children: [] }))
+    })
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              size: { width: WORD_PAGE.width, height: WORD_PAGE.height },
+              margin: { top: WORD_MARGIN, bottom: WORD_MARGIN, left: WORD_MARGIN, right: WORD_MARGIN },
+            },
+          },
+          children: [
+            ...coverBlocks,
+            ...(cardBlocks.length ? [new Paragraph({ children: [new PageBreak()] }), ...cardBlocks] : []),
+          ],
+        },
+      ],
+    })
+
+    const buffer = await Packer.toBuffer(doc)
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    res.setHeader('Content-Disposition', 'attachment; filename=Employee-Bio-Data.docx')
+    res.status(200).send(buffer)
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+module.exports = { getTableData, updateRecord, deleteRecord, bulkDeleteRecords, exportTablePdf, exportTableWord }

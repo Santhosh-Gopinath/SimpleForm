@@ -150,6 +150,16 @@
   cursor: not-allowed;
 }
 
+/* Export to Word gets its own blue accent so it reads as a distinct
+   action from the green "Export to PDF" / "Add Data" buttons. */
+.export-btn-word {
+  background: #2b6cb0;
+}
+
+.export-btn-word:hover:not(:disabled) {
+  background: #1f5391;
+}
+
 .btn-icon {
   width: 15px;
   height: 15px;

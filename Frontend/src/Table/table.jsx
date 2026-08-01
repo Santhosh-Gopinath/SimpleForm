@@ -40,7 +40,8 @@ function Table({ refreshKey, onDataChanged }) {
   // confirmAction shape: { type: 'update' | 'delete-single' | 'delete-bulk', payload }
 
   const [showAddModal, setShowAddModal] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [isExportingWord, setIsExportingWord] = useState(false)
 
   const editDobRef = useRef(null)
   const openDatePicker = (ref) => {
@@ -247,26 +248,51 @@ function Table({ refreshKey, onDataChanged }) {
     if (onDataChanged) onDataChanged()
   }
 
+  // ---- shared download helper for the export buttons ----
+  const downloadFile = (blobData, mimeType, filename) => {
+    const url = window.URL.createObjectURL(new Blob([blobData], { type: mimeType }))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  }
+
   // ---- export to pdf ----
   const handleExportPdf = async () => {
-    setIsExporting(true)
+    setIsExportingPdf(true)
     try {
       const res = await axios.get('http://localhost:3000/api/table/export-pdf', {
         responseType: 'blob',
       })
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', 'Employee-Bio-Data.pdf')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
+      downloadFile(res.data, 'application/pdf', 'Employee-Bio-Data.pdf')
     } catch (err) {
       console.error(err)
       alert('Something went wrong while exporting the PDF. Please try again.')
     } finally {
-      setIsExporting(false)
+      setIsExportingPdf(false)
+    }
+  }
+
+  // ---- export to word ----
+  const handleExportWord = async () => {
+    setIsExportingWord(true)
+    try {
+      const res = await axios.get('http://localhost:3000/api/table/export-word', {
+        responseType: 'blob',
+      })
+      downloadFile(
+        res.data,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Employee-Bio-Data.docx'
+      )
+    } catch (err) {
+      console.error(err)
+      alert('Something went wrong while exporting the Word document. Please try again.')
+    } finally {
+      setIsExportingWord(false)
     }
   }
 
@@ -293,11 +319,18 @@ function Table({ refreshKey, onDataChanged }) {
             Add Data
           </button>
 
-          <button className="export-btn" onClick={handleExportPdf} disabled={isExporting}>
+          <button className="export-btn" onClick={handleExportPdf} disabled={isExportingPdf}>
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {isExporting ? 'Exporting...' : 'Export to PDF'}
+            {isExportingPdf ? 'Exporting...' : 'Export to PDF'}
+          </button>
+
+          <button className="export-btn export-btn-word" onClick={handleExportWord} disabled={isExportingWord}>
+            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {isExportingWord ? 'Exporting...' : 'Export to Word'}
           </button>
         </div>
       </div>
